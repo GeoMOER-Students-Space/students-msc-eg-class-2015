@@ -12,6 +12,8 @@ filepath_base <- "/media/tnauss/myWork/analysis/moc_rs/data/"
 localArcPath <- paste0(filepath_base, "modis/modis_arc/")
 outDirPath <- paste0(filepath_base, "modis/processed/")
 
+cropPath <-paste0(filepath_base, "modis/croped/")
+
 shpPath <- paste0(filepath_base, "shp/")
 
 rasterOptions(tmpdir=paste0(filepath_base, "tmp/")) 
@@ -46,7 +48,7 @@ modis_files <- list.files(paste0(getOption("MODIS_outDirPath"), "/", job_name),
                           pattern = glob2rx("*.tif"), full.names = TRUE)
 modis_data <- stack(modis_files)
 modis_data_crop <- crop(modis_data, country_shp)     
-
+writeRaster(modis_data_crop, paste0(cropPath, "MODIS.tif"), bylayer = TRUE)
 
 
 # lst <- lapply(c("NDVI", "VI_Quality"), function(i) {
