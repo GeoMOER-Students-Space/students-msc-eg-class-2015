@@ -1,10 +1,24 @@
+# Read observational data on biodiversity of all EPs and combine into dataframe
+
 library(vegan)
 
-path_data <- "D:/active/exploratorien/data/"
 
+# Set path ---------------------------------------------------------------------
+if(Sys.info()["sysname"] == "Windows"){
+  filepath_base <- "F:/analysis/moc_rs/"
+} else {
+  filepath_base <- "/media/tnauss/myWork/analysis/moc_rs/"
+}
+
+path_biodiv <- paste0(filepath_base, "data/biodiv/")
+path_results <- paste0(filepath_base, "data/rdata/")
+path_temp <- paste0(filepath_base, "data/temp/")
+
+
+# Read and adjust vegetation observations --------------------------------------
 # Header data vegetation releves 2014
 df_veg_2014 <- read.table(
-  paste0(path_data, "19807_header data vegetation relevés 2014_1.1.7/19807.txt"),
+  paste0(path_biodiv, "19807_header data vegetation relevés 2014_1.1.7/19807.txt"),
   header = TRUE, sep = "\t", dec = ".")
 df_veg_2014$EPID <- as.character(df_veg_2014$EpPlotID)
 df_veg_2014$EPID[nchar(df_veg_2014$EPID) == 4] <- paste0(
@@ -14,7 +28,7 @@ df_veg_2014$EPID[nchar(df_veg_2014$EPID) == 4] <- paste0(
 
 # Header data vegetation releves 2015
 df_veg_2015 <- read.table(
-  paste0(path_data, "19809_header data vegetation relevés 2015_1.1.5/19809.txt"),
+  paste0(path_biodiv, "19809_header data vegetation relevés 2015_1.1.5/19809.txt"),
   header = TRUE, sep = "\t", dec = ".")
 df_veg_2015$EPID <- as.character(df_veg_2015$EpPlotID)
 df_veg_2015$EPID[nchar(df_veg_2015$EPID) == 4] <- paste0(
@@ -23,7 +37,7 @@ df_veg_2015$EPID[nchar(df_veg_2015$EPID) == 4] <- paste0(
 
 
 # Vegetation releves 2008 to 2015
-df_veg_0815 <- read.table(paste0(path_data, "19686_vegetation relevés EP 2008-2015_1.2.5/19686.txt"),
+df_veg_0815 <- read.table(paste0(path_biodiv, "19686_vegetation relevés EP 2008-2015_1.2.5/19686.txt"),
                      header = TRUE, sep = "\t", dec = ".")
 df_veg_0815$EPID <- as.character(df_veg_0815$EP_PlotId)
 df_veg_0815$EPID[nchar(df_veg_0815$EPID) == 4] <- paste0(
@@ -57,6 +71,8 @@ df_veg_0815_div <- lapply(unique(df_veg_0815$Year), function(y){
 df_veg_0815_div <- do.call("rbind", df_veg_0815_div)
 df_veg_0815_div$EPID <- as.factor(df_veg_0815_div$EPID)
 
+
+# Merge vegetation observations ------------------------------------------------
 veg_2014 <- merge(df_veg_0815_div[df_veg_0815_div$Year == 2014, ],
                   df_veg_2014, by = "EPID")
 
@@ -64,7 +80,8 @@ veg_2015 <- merge(df_veg_0815_div[df_veg_0815_div$Year == 2015, ],
                   df_veg_2015, by = "EPID")
 
 
+# Write vegetation observations ------------------------------------------------
 save(df_veg_0815_div, df_veg_2014, df_veg_2015, veg_2014, veg_2015, 
-     file = paste0(path_data, "be_veg_releves.RData"))
+     file = paste0(path_results, "be_veg_releves.RData"))
 
 
