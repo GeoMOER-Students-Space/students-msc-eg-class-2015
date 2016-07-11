@@ -27,15 +27,16 @@ glcm_texture <- function(data, idname){
                           min_x=NULL, max_x=NULL, na_opt="any", 
                           na_val=NA, scale_factor=1, asinteger=FALSE)
     texture <- as.data.frame(texture)[4, seq(4, 56,  by = 7)]
-    colnames(texture) <- c("mean", "variance", "homogeneity", 
-                                 "contrast", "dissimilarity", "entropy", 
-                                 "second_moment", "correlation")
+    colnames(texture) <- paste0(idname, "_", c("mean", "variance", "homogeneity", 
+                                               "contrast", "dissimilarity", "entropy", 
+                                               "second_moment", "correlation"),
+                                "_", as.character(w), "x", as.character(w))
     return(texture)
   })
-  texture <- do.call("rbind", texture)
-  texture$window <- c("w3x3", "w5x5")
-  texture$idname <- idname
-  texture <- melt(texture, id.vars = c("idname", "window"))
+  texture <- do.call("cbind", texture)
+  # texture$window <- c("w3x3", "w5x5")
+  # texture$idname <- idname
+  # texture <- melt(texture, id.vars = c("idname", "window"))
   return(texture)
 }
 
@@ -55,12 +56,14 @@ movwin <- function(data, idname){
                  quantile(data[seq(4-way, 4+way),seq(4-way, 4+way)], 
                           probs = 0.75, na.rm = TRUE)) / 
         sd(data[seq(4-way, 4+way),seq(4-way, 4+way)]))
+    colnames(movwin) <- paste0(idname, "_", colnames(movwin), "_", 
+                               as.character(w), "x", as.character(w))
     return(movwin)
   })
-  movwin <- do.call("rbind", movwin)
-  movwin$window <- c("w3x3", "w5x5", "w7x7")
-  movwin$idname <- idname
-  movwin <- melt(movwin, id.vars = c("idname", "window"))
+  movwin <- do.call("cbind", movwin)
+  # movwin$window <- c("w3x3", "w5x5", "w7x7")
+  # movwin$idname <- idname
+  # movwin <- melt(movwin, id.vars = c("idname", "window"))
   return(movwin)
 }
 
@@ -109,8 +112,8 @@ specdiv <- function(data, date, sat_name){
       msavi_movwin <- movwin(matrix(msavi, 7, 7), idname = "msavi_movwin")
       mtvi_movwin <- movwin(matrix(mtvi, 7, 7), idname = "mtvi_movwin")
       tvi_movwin <- movwin(matrix(tvi, 7, 7), idname = "tvi_movwin")
-      
-      specdiv <- rbind(mal_base_glcm, ndvi_glcm,
+
+      specdiv <- cbind(mal_base_glcm, ndvi_glcm,
                        mal_base_movwin, mal_ext_movwin,
                        ndvi_movwin, rvi_movwin, 
                        msavi_movwin, mtvi_movwin, 
@@ -118,9 +121,22 @@ specdiv <- function(data, date, sat_name){
                        
       specdiv$epid <- names(data)[d]
       specdiv$date <- as.Date(date)
+      specdiv$sensor <- sat_name
       return(specdiv)
     }
   })
   specdiv <- do.call("rbind", specdiv)
   return(specdiv)
+}
+
+
+maxndvi <- function(data, date){
+  date <- as.Date(date)
+  act <- data[data$date >= date[1] & data$date <= date[2], ]
+  maxndvi <- lapply(unique(act$epid), function(p){
+    sub <- act[act$epid == p, ]
+    return(sub[which.max(sub$ndvi_movwin_med_3x3),])
+  })
+  maxndvi <- do.call("rbind", maxndvi)
+  return(maxndvi)
 }

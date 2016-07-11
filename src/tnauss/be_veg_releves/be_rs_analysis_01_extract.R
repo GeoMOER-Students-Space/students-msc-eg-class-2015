@@ -23,7 +23,7 @@ path_source <- paste0(filepath_base, "msc-c2015/src/tnauss/be_veg_releves/")
 rasterOptions(tmpdir= path_temp)
 
 
-source(paste0(path_source, "be_rs_analysis_satdata_functions.R"))
+source(paste0(path_source, "be_rs_analysis_functions.R"))
 
 
 # Read plot geodata ------------------------------------------------------------
