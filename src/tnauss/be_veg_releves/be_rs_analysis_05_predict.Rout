@@ -1,0 +1,562 @@
+
+R version 3.3.0 (2016-05-03) -- "Supposedly Educational"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R ist freie Software und kommt OHNE JEGLICHE GARANTIE.
+Sie sind eingeladen, es unter bestimmten Bedingungen weiter zu verbreiten.
+Tippen Sie 'license()' or 'licence()' für Details dazu.
+
+R ist ein Gemeinschaftsprojekt mit vielen Beitragenden.
+Tippen Sie 'contributors()' für mehr Information und 'citation()',
+um zu erfahren, wie R oder R packages in Publikationen zitiert werden können.
+
+Tippen Sie 'demo()' für einige Demos, 'help()' für on-line Hilfe, oder
+'help.start()' für eine HTML Browserschnittstelle zur Hilfe.
+Tippen Sie 'q()', um R zu verlassen.
+
+> # Predict in-situ observations using satellite data
+> library(gpm)
+Lade nötiges Paket: caret
+Lade nötiges Paket: lattice
+Lade nötiges Paket: ggplot2
+Lade nötiges Paket: gridExtra
+Lade nötiges Paket: impute
+Lade nötiges Paket: latticeExtra
+Lade nötiges Paket: RColorBrewer
+
+Attache Paket: 'latticeExtra'
+
+The following object is masked from 'package:ggplot2':
+
+    layer
+
+Lade nötiges Paket: raster
+Lade nötiges Paket: sp
+Lade nötiges Paket: satellite
+Lade nötiges Paket: Rcpp
+Lade nötiges Paket: plyr
+Lade nötiges Paket: dplyr
+
+Attache Paket: 'dplyr'
+
+The following objects are masked from 'package:plyr':
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from 'package:raster':
+
+    intersect, select, union
+
+The following object is masked from 'package:gridExtra':
+
+    combine
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+
+Attache Paket: 'gpm'
+
+The following object is masked from 'package:satellite':
+
+    lutInfo
+
+> 
+> # Set path ---------------------------------------------------------------------
+> if(Sys.info()["sysname"] == "Windows"){
++   filepath_base <- "F:/analysis/moc_rs/"
++ } else {
++   filepath_base <- "/media/tnauss/myWork/analysis/moc_rs/"
++ }
+> 
+> path_results <- paste0(filepath_base, "data/rdata/")
+> path_temp <- paste0(filepath_base, "data/temp/")
+> path_source <- paste0(filepath_base, "msc-c2015/src/tnauss/be_veg_releves/")
+> filepath_results <- paste0(filepath_base, "data/rdata/")
+> 
+> source(paste0(path_source, "be_rs_analysis_functions.R"))
+Warnmeldung:
+Paket 'glcm' wurde unter R Version 3.3.1 erstellt 
+> 
+> # Read combined dataset from script be_rs_analysis_04_combine.R ----------------
+> load(paste0(path_results, "be_sat_veg.RData"))
+> 
+> 
+> 
+> # Prepare gpm object -----------------------------------------------------------
+> # Use maximum NDVI until July 2014 to identify the respective scenes.
+> # dataset <- sat_veg[sat_veg$sensor == "re", ]
+> # dataset <- maxndvi(data = dataset, date = c("2014-01-01", "2014-06-01"))
+> 
+> response <- "specrich"
+> dataset <- sat_veg[sat_veg$sensor == "ls", ]
+> # dataset <- maxndvi(data = dataset, date = list(c("2014-01-01", "2014-05-01"),
+> #                                                c("2015-01-01", "2015-05-01")))
+> dataset <- maxndvi(data = dataset, date = list(c("2014-01-01", "2014-05-01")))
+> dataset <- dataset[!is.na(dataset[, response]),]
+> 
+> 
+> 
+> # GPM --------------------------------------------------------------------------
+> response <- response
+> 
+> col_biodiv <- c(122:124, 131:141)
+> col_sat <- c(3:118)
+> col_meta <- seq(ncol(dataset))[!seq(ncol(dataset)) %in% c(col_biodiv, col_sat)]
+>               
+> meta <- createGPMMeta(dataset, type = "input",
++                       selector = 1, response = col_biodiv, 
++                       independent = col_sat, meta = col_meta)
+> obsv <- gpm(dataset, meta, scale = TRUE)
+> 
+> 
+> # Compile model evaluation dataset ---------------------------------------------
+> selid <- obsv@data$input$epid
+> # selid <- paste(obsv@data$input$epid, obsv@data$input$year, sep = "_")
+> obsv_resamples <- resamplingsByVariable(x = obsv@data$input, 
++                                         selector = selid, 
++                                         grabs = 1,
++                                         resample = 100)
+> 
+> 
+> # Split dataset into testing and training samples for each individual species --
+> obsv_trte <- splitMultResp(x = obsv@data$input, 
++                            response = response,
++                            resamples = obsv_resamples,
++                            p = 0.75)
+> 
+> # obsv_trte <- splitMultResp(x = obsv@data$input, 
+> #                            response = response,
+> #                            resamples = obsv_resamples,
+> #                            p = 0.75,
+> #                            selector = "year")
+> 
+> # Evaluate prediction models ---------------------------------------------------
+> independent <- obsv@meta$input$INDEPENDENT
+> independent <- c("tvi_movwin_med_3x3", "msavi_movwin_med_7x7", 
++                  "rvi_movwin_med_3x3", "ndvi_movwin_med_3x3", 
++                  "ndvi_movwin_med_7x7")
+> n_vars <- c(seq(length(independent)))
+> 
+> models_gam <- trainModel(x = obsv, mode = "ffs",
++                          response = response, independent = independent,
++                          resamples = obsv_trte, n_var = n_vars,
++                          mthd = "gam", seed_nbr = 11, cv_nbr = 5,
++                          var_selection = "sd",
++                          filepath_tmp = filepath_results)
+[1] "Computing resample instance 1 of response instance 1..."
+Loading required package: doParallel
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+Loading required package: mgcv
+Loading required package: nlme
+
+Attaching package: 'nlme'
+
+The following object is masked from 'package:dplyr':
+
+    collapse
+
+The following object is masked from 'package:raster':
+
+    getData
+
+This is mgcv 1.8-12. For overview type 'help("mgcv-package")'.
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 2 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 3 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 4 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 5 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 6 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 7 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 8 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 9 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 10 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 11 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 12 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 13 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 14 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 15 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 16 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 17 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 18 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 19 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 20 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 21 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 22 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 23 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 24 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 25 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 26 of response instance 1..."
+[1] "maxmimum number of models that still need to be trained: 15"
+[1] "maxmimum number of models that still need to be trained: 14"
+[1] "maxmimum number of models that still need to be trained: 13"
+[1] "maxmimum number of models that still need to be trained: 12"
+[1] "maxmimum number of models that still need to be trained: 11"
+[1] "maxmimum number of models that still need to be trained: 10"
+[1] "maxmimum number of models that still need to be trained: 9"
+[1] "maxmimum number of models that still need to be trained: 8"
+[1] "maxmimum number of models that still need to be trained: 7"
+[1] "maxmimum number of models that still need to be trained: 6"
+[1] "maxmimum number of models that still need to be trained: 5"
+[1] "maxmimum number of models that still need to be trained: 4"
+[1] "maxmimum number of models that still need to be trained: 3"
+Note: No increase in performance found using more than 2 variables
+[1] "Computing resample instance 27 of response instance 1..."

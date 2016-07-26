@@ -131,12 +131,15 @@ specdiv <- function(data, date, sat_name){
 
 
 maxndvi <- function(data, date){
-  date <- as.Date(date)
-  act <- data[data$date >= date[1] & data$date <= date[2], ]
-  maxndvi <- lapply(unique(act$epid), function(p){
-    sub <- act[act$epid == p, ]
-    return(sub[which.max(sub$ndvi_movwin_med_3x3),])
+  maxndvi <- lapply(date, function(d){
+    d <- as.Date(d)
+    act <- data[data$date >= d[1] & data$date <= d[2], ]
+    maxndvi <- lapply(unique(act$epid), function(p){
+      sub <- act[act$epid == p, ]
+      return(sub[which.max(sub$ndvi_movwin_med_3x3),])
+    })
+    maxndvi <- do.call("rbind", maxndvi)
+    return(maxndvi)
   })
-  maxndvi <- do.call("rbind", maxndvi)
-  return(maxndvi)
+  return(do.call("rbind", maxndvi))
 }
