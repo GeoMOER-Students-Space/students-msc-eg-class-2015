@@ -1,70 +1,74 @@
 
 R version 3.3.0 (2016-05-03) -- "Supposedly Educational"
 Copyright (C) 2016 The R Foundation for Statistical Computing
-Platform: x86_64-w64-mingw32/x64 (64-bit)
+Platform: x86_64-pc-linux-gnu (64-bit)
 
-R ist freie Software und kommt OHNE JEGLICHE GARANTIE.
-Sie sind eingeladen, es unter bestimmten Bedingungen weiter zu verbreiten.
-Tippen Sie 'license()' or 'licence()' für Details dazu.
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
 
-R ist ein Gemeinschaftsprojekt mit vielen Beitragenden.
-Tippen Sie 'contributors()' für mehr Information und 'citation()',
-um zu erfahren, wie R oder R packages in Publikationen zitiert werden können.
+  Natural language support but running in an English locale
 
-Tippen Sie 'demo()' für einige Demos, 'help()' für on-line Hilfe, oder
-'help.start()' für eine HTML Browserschnittstelle zur Hilfe.
-Tippen Sie 'q()', um R zu verlassen.
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
 
 > # Predict in-situ observations using satellite data
 > library(gpm)
-Lade nötiges Paket: caret
-Lade nötiges Paket: lattice
-Lade nötiges Paket: ggplot2
-Lade nötiges Paket: gridExtra
-Lade nötiges Paket: impute
-Lade nötiges Paket: latticeExtra
-Lade nötiges Paket: RColorBrewer
+Loading required package: caret
+Loading required package: lattice
+Loading required package: ggplot2
+Loading required package: gridExtra
+Loading required package: impute
+Loading required package: latticeExtra
+Loading required package: RColorBrewer
 
-Attache Paket: 'latticeExtra'
+Attaching package: â€˜latticeExtraâ€™
 
-The following object is masked from 'package:ggplot2':
+The following object is masked from â€˜package:ggplot2â€™:
 
     layer
 
-Lade nötiges Paket: raster
-Lade nötiges Paket: sp
-Lade nötiges Paket: satellite
-Lade nötiges Paket: Rcpp
-Lade nötiges Paket: plyr
-Lade nötiges Paket: dplyr
+Loading required package: raster
+Loading required package: sp
+Loading required package: satellite
+Loading required package: Rcpp
+Loading required package: plyr
+Loading required package: dplyr
 
-Attache Paket: 'dplyr'
+Attaching package: â€˜dplyrâ€™
 
-The following objects are masked from 'package:plyr':
+The following objects are masked from â€˜package:plyrâ€™:
 
     arrange, count, desc, failwith, id, mutate, rename, summarise,
     summarize
 
-The following objects are masked from 'package:raster':
+The following objects are masked from â€˜package:rasterâ€™:
 
     intersect, select, union
 
-The following object is masked from 'package:gridExtra':
+The following object is masked from â€˜package:gridExtraâ€™:
 
     combine
 
-The following objects are masked from 'package:stats':
+The following objects are masked from â€˜package:statsâ€™:
 
     filter, lag
 
-The following objects are masked from 'package:base':
+The following objects are masked from â€˜package:baseâ€™:
 
     intersect, setdiff, setequal, union
 
 
-Attache Paket: 'gpm'
+Attaching package: â€˜gpmâ€™
 
-The following object is masked from 'package:satellite':
+The following object is masked from â€˜package:satelliteâ€™:
 
     lutInfo
 
@@ -82,8 +86,6 @@ The following object is masked from 'package:satellite':
 > filepath_results <- paste0(filepath_base, "data/rdata/")
 > 
 > source(paste0(path_source, "be_rs_analysis_functions.R"))
-Warnmeldung:
-Paket 'glcm' wurde unter R Version 3.3.1 erstellt 
 > 
 > # Read combined dataset from script be_rs_analysis_04_combine.R ----------------
 > load(paste0(path_results, "be_sat_veg.RData"))
@@ -159,13 +161,13 @@ Loading required package: parallel
 Loading required package: mgcv
 Loading required package: nlme
 
-Attaching package: 'nlme'
+Attaching package: â€˜nlmeâ€™
 
-The following object is masked from 'package:dplyr':
+The following object is masked from â€˜package:dplyrâ€™:
 
     collapse
 
-The following object is masked from 'package:raster':
+The following object is masked from â€˜package:rasterâ€™:
 
     getData
 
@@ -545,18 +547,4 @@ Note: No increase in performance found using more than 2 variables
 [1] "maxmimum number of models that still need to be trained: 3"
 Note: No increase in performance found using more than 2 variables
 [1] "Computing resample instance 26 of response instance 1..."
-[1] "maxmimum number of models that still need to be trained: 15"
-[1] "maxmimum number of models that still need to be trained: 14"
-[1] "maxmimum number of models that still need to be trained: 13"
-[1] "maxmimum number of models that still need to be trained: 12"
-[1] "maxmimum number of models that still need to be trained: 11"
-[1] "maxmimum number of models that still need to be trained: 10"
-[1] "maxmimum number of models that still need to be trained: 9"
-[1] "maxmimum number of models that still need to be trained: 8"
-[1] "maxmimum number of models that still need to be trained: 7"
-[1] "maxmimum number of models that still need to be trained: 6"
-[1] "maxmimum number of models that still need to be trained: 5"
-[1] "maxmimum number of models that still need to be trained: 4"
-[1] "maxmimum number of models that still need to be trained: 3"
-Note: No increase in performance found using more than 2 variables
-[1] "Computing resample instance 27 of response instance 1..."
+Killed

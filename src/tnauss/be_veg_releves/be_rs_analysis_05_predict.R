@@ -27,6 +27,7 @@ load(paste0(path_results, "be_sat_veg.RData"))
 
 response <- "specrich"
 dataset <- sat_veg[sat_veg$sensor == "ls", ]
+# dataset <- sat_veg[sat_veg$sensor == "re", ]
 # dataset <- maxndvi(data = dataset, date = list(c("2014-01-01", "2014-05-01"),
 #                                                c("2015-01-01", "2015-05-01")))
 dataset <- maxndvi(data = dataset, date = list(c("2014-01-01", "2014-05-01")))
@@ -53,7 +54,7 @@ selid <- obsv@data$input$epid
 obsv_resamples <- resamplingsByVariable(x = obsv@data$input, 
                                         selector = selid, 
                                         grabs = 1,
-                                        resample = 100)
+                                        resample = 10)
 
 
 # Split dataset into testing and training samples for each individual species --
@@ -70,9 +71,16 @@ obsv_trte <- splitMultResp(x = obsv@data$input,
 
 # Evaluate prediction models ---------------------------------------------------
 independent <- obsv@meta$input$INDEPENDENT
-independent <- c("tvi_movwin_med_3x3", "msavi_movwin_med_7x7", 
+independent_ls <- c("tvi_movwin_med_3x3", "msavi_movwin_med_7x7", 
                  "rvi_movwin_med_3x3", "ndvi_movwin_med_3x3", 
                  "ndvi_movwin_med_7x7")
+
+independent_re <- c("mtvi_movwin_medsd_5x5", "mtvi_movwin_med_5x5", 
+                 "mtvi_movwin_med_7x7", "rvi_movwin_medsd_5x5", 
+                 "mtvi_movwin_med_3x3")
+
+independent <- independent_ls
+
 n_vars <- c(seq(length(independent)))
 
 models_gam <- trainModel(x = obsv, mode = "ffs",
@@ -82,44 +90,61 @@ models_gam <- trainModel(x = obsv, mode = "ffs",
                          var_selection = "sd",
                          filepath_tmp = filepath_results)
 
-models_pls <- trainModel(x = obsv, mode = "ffs",
-                         response = response, independent = independent,
-                         resamples = obsv_trte, n_var = n_vars,
-                         mthd = "pls", seed_nbr = 11, cv_nbr = 5,
-                         var_selection = "sd",
-                         filepath_tmp = filepath_results)
+save(models_gam, file = paste0(path_results, "models_gam_ls.RData"))
 
-
-models <- trainModel(x = obsv,
-                     response = response, independent = independent,
-                     resamples = obsv_trte, n_var = n_vars,
-                     mthd = "rf", seed_nbr = 11, cv_nbr = 5,
-                     var_selection = "sd",
-                     filepath_tmp = filepath_results)
+# load(paste0(filepath_results, "gpm_trainModel_model_instances_001.RData"))
 
 models <- models_gam
 test <- compRegrTests(models, per_model = TRUE)
-unique(test$r_squared)
+boxplot(unique(test$r_squared))
 mean(aggregate(test$r_squared, by = list(test$sample), FUN = "mean")$x)
 
+lapply(models, function(m){
+  resamples <- lapply(m, function(r){
+    r$model$finalModel$xNames
+  })  
+  return(do.call("rbind", resamples))
+})
 
 
-var_imp <- compVarImp(models, scale = FALSE)
-
-var_imp_scale <- compVarImp(models, scale = TRUE)
-
-var_imp_plot <- plotVarImp(var_imp)
-
-var_imp_heat <- plotVarImpHeatmap(var_imp_scale, xlab = "Species", ylab = "Band")
-
-tstat <- compContTests(models, mean = TRUE)
-
-tstat_mean <- merge(tstat[[1]], prevalence, by.x = "Response", by.y = "RESPONSE")
-
-tstat_mean[order(tstat_mean$Kappa_mean, decreasing = TRUE),]
-
-ggplot(data = tstat_mean, aes(x = OCCURENCE, y = Kappa_mean)) + geom_point() + geom_smooth()
-
-
-
-
+# models_pls <- trainModel(x = obsv, mode = "ffs",
+#                          response = response, independent = independent,
+#                          resamples = obsv_trte, n_var = n_vars,
+#                          mthd = "pls", seed_nbr = 11, cv_nbr = 5,
+#                          var_selection = "sd",
+#                          filepath_tmp = filepath_results)
+# 
+# 
+# models <- trainModel(x = obsv,
+#                      response = response, independent = independent,
+#                      resamples = obsv_trte, n_var = n_vars,
+#                      mthd = "rf", seed_nbr = 11, cv_nbr = 5,
+#                      var_selection = "sd",
+#                      filepath_tmp = filepath_results)
+# 
+# models <- models_gam
+# test <- compRegrTests(models, per_model = TRUE)
+# unique(test$r_squared)
+# mean(aggregate(test$r_squared, by = list(test$sample), FUN = "mean")$x)
+# 
+# 
+# 
+# var_imp <- compVarImp(models, scale = FALSE)
+# 
+# var_imp_scale <- compVarImp(models, scale = TRUE)
+# 
+# var_imp_plot <- plotVarImp(var_imp)
+# 
+# var_imp_heat <- plotVarImpHeatmap(var_imp_scale, xlab = "Species", ylab = "Band")
+# 
+# tstat <- compContTests(models, mean = TRUE)
+# 
+# tstat_mean <- merge(tstat[[1]], prevalence, by.x = "Response", by.y = "RESPONSE")
+# 
+# tstat_mean[order(tstat_mean$Kappa_mean, decreasing = TRUE),]
+# 
+# ggplot(data = tstat_mean, aes(x = OCCURENCE, y = Kappa_mean)) + geom_point() + geom_smooth()
+# 
+# 
+# 
+# 
