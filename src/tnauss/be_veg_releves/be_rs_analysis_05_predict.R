@@ -6,6 +6,7 @@ if(Sys.info()["sysname"] == "Windows"){
   filepath_base <- "F:/analysis/moc_rs/"
 } else {
   filepath_base <- "/media/tnauss/myWork/analysis/moc_rs/"
+  filepath_base <- "/media/dogbert/myWork/analysis/moc_rs/"
 }
 
 path_results <- paste0(filepath_base, "data/rdata/")
@@ -71,6 +72,9 @@ obsv_trte <- splitMultResp(x = obsv@data$input,
 
 # Evaluate prediction models ---------------------------------------------------
 independent <- obsv@meta$input$INDEPENDENT
+
+independent_3x3 <- obsv@meta$input$INDEPENDENT[grep("3x3", independent)]
+
 independent_ls <- c("tvi_movwin_med_3x3", "msavi_movwin_med_7x7", 
                  "rvi_movwin_med_3x3", "ndvi_movwin_med_3x3", 
                  "ndvi_movwin_med_7x7")
@@ -80,6 +84,7 @@ independent_re <- c("mtvi_movwin_medsd_5x5", "mtvi_movwin_med_5x5",
                  "mtvi_movwin_med_3x3")
 
 independent <- independent_ls
+independent <- independent_3x3
 
 n_vars <- c(seq(length(independent)))
 
@@ -90,11 +95,21 @@ models_gam <- trainModel(x = obsv, mode = "ffs",
                          var_selection = "sd",
                          filepath_tmp = filepath_results)
 
-save(models_gam, file = paste0(path_results, "models_gam_ls.RData"))
 
-# load(paste0(filepath_results, "gpm_trainModel_model_instances_001.RData"))
+models_rf <- trainModel(x = obsv, mode = "ffs",
+                         response = response, independent = independent,
+                         resamples = obsv_trte, n_var = n_vars,
+                         mthd = "rf", seed_nbr = 11, cv_nbr = 5,
+                         var_selection = "sd",
+                         filepath_tmp = filepath_results)
+
+save(models_gam, file = paste0(path_results, "models_gam_ls.RData"))
+save(models_rf, file = paste0(path_results, "models_rf_ls.RData"))
+
+# load(paste0(filepath_results, "models_gam_ls.RData"))
 
 models <- models_gam
+models <- models_rf
 test <- compRegrTests(models, per_model = TRUE)
 boxplot(unique(test$r_squared))
 mean(aggregate(test$r_squared, by = list(test$sample), FUN = "mean")$x)
@@ -129,11 +144,11 @@ lapply(models, function(m){
 # 
 # 
 # 
-# var_imp <- compVarImp(models, scale = FALSE)
-# 
-# var_imp_scale <- compVarImp(models, scale = TRUE)
-# 
-# var_imp_plot <- plotVarImp(var_imp)
+var_imp <- compVarImp(models, scale = FALSE)
+
+var_imp_scale <- compVarImp(models, scale = TRUE)
+
+var_imp_plot <- plotVarImp(var_imp_scale)
 # 
 # var_imp_heat <- plotVarImpHeatmap(var_imp_scale, xlab = "Species", ylab = "Band")
 # 
